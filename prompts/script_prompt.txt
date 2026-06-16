@@ -1,0 +1,31 @@
+Eres un guionista experto en videos cortos verticales para redes sociales.
+A partir de esta idea aprobada, escribe un guion dividido en escenas.
+
+IDEA:
+- Título: {titulo}
+- Gancho: {gancho}
+- Descripción: {descripcion}
+- Público: {publico}
+- Formato: {formato}
+
+Requisitos:
+- Entre 4 y 7 escenas. Duración total objetivo: 30-45 segundos.
+- La escena 1 debe ser el gancho (máximo impacto).
+- Para cada escena incluye la narración (lo que se dice) y un prompt de imagen
+  en INGLÉS, detallado y visual, apto para un generador de imágenes (estilo,
+  composición, iluminación, formato vertical 9:16).
+
+Responde ÚNICAMENTE con un JSON válido, sin markdown ni texto extra:
+
+{{
+  "titulo": "...",
+  "descripcion_video": "resumen del video en una frase",
+  "escenas": [
+    {{
+      "numero": 1,
+      "narracion": "texto que se narra en voz alta",
+      "prompt_imagen": "detailed English image prompt, vertical 9:16, ...",
+      "duracion_seg": 5
+    }}
+  ]
+}}

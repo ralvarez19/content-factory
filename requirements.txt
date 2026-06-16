@@ -1,0 +1,15 @@
+# Content Factory - dependencias Python (local, sin APIs de pago obligatorias)
+
+# HTTP y configuración
+requests>=2.31
+python-dotenv>=1.0
+pydantic>=2.0
+
+# Audio narrado (gratuito, local)
+edge-tts>=6.1
+
+# Imágenes (placeholders y manipulación)
+Pillow>=10.0
+
+# Video (alternativa a FFmpeg por línea de comandos; opcional)
+moviepy>=1.0.3

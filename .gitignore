@@ -1,0 +1,55 @@
+# ============================================================
+#  Content Factory - .gitignore
+#  Protege secretos y archivos generados
+# ============================================================
+
+# --- Secretos: NUNCA versionar ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+config/secrets.*
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+
+# --- Salidas generadas (contenido pesado) ---
+outputs/ideas/*
+outputs/scripts/*
+outputs/audio/*
+outputs/images/*
+outputs/videos/*
+!outputs/**/.gitkeep
+
+# --- Base de datos local ---
+database/*.db
+database/*.sqlite
+database/*.sqlite3
+
+# --- Logs ---
+logs/*
+!logs/.gitkeep
+
+# --- Diagnósticos temporales ---
+_diagnostico_*/
+diagnostico_*.zip
+
+# --- n8n (datos de Docker, si se montan localmente) ---
+n8n_data/
+
+# --- Sistema operativo / editores ---
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.tmp

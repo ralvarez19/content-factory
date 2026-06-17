@@ -49,12 +49,28 @@ N8N_HOST = _get("N8N_HOST", "localhost")
 N8N_PROTOCOL = _get("N8N_PROTOCOL", "http")
 N8N_URL = f"{N8N_PROTOCOL}://{N8N_HOST}:{N8N_PORT}"
 
+def _localize(url: str) -> str:
+    """
+    Los scripts de Python corren SIEMPRE en el host (no dentro del contenedor
+    de n8n). 'host.docker.internal' solo resuelve dentro de Docker, así que para
+    estos scripts lo convertimos a 'localhost'. n8n sigue usando el valor del
+    .env tal cual desde sus nodos HTTP.
+    """
+    return url.replace("host.docker.internal", "localhost")
+
+
 # --- Ollama -----------------------------------------------------------------
-OLLAMA_BASE_URL = _get("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_BASE_URL = _localize(_get("OLLAMA_BASE_URL", "http://localhost:11434"))
 OLLAMA_MODEL = _get("OLLAMA_MODEL", "llama3.1:8b")
 
 # --- ComfyUI ----------------------------------------------------------------
-COMFYUI_URL = _get("COMFYUI_URL", "http://localhost:8188")
+COMFYUI_URL = _localize(_get("COMFYUI_URL", "http://localhost:8188"))
+# Checkpoint instalado en ComfyUI/models/checkpoints (cámbialo al tuyo).
+COMFYUI_CKPT = _get("COMFYUI_CKPT", "sd_xl_base_1.0.safetensors")
+# Dimensiones de generación (vertical). El video luego escala/rellena a VIDEO_*.
+COMFYUI_IMG_WIDTH = int(_get("COMFYUI_IMG_WIDTH", "832") or 832)
+COMFYUI_IMG_HEIGHT = int(_get("COMFYUI_IMG_HEIGHT", "1216") or 1216)
+COMFYUI_NEG = _get("COMFYUI_NEG", "lowres, blurry, watermark, text, deformed, ugly")
 
 # --- Telegram ---------------------------------------------------------------
 TELEGRAM_BOT_TOKEN = _get("TELEGRAM_BOT_TOKEN")

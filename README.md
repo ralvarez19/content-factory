@@ -1,173 +1,218 @@
-# Content Factory (semiautomática)
+# Content Factory 🎬 (semiautomática)
 
-Fábrica de contenido **semiautomática** para generar videos cortos verticales
-(TikTok / Reels / Shorts). El flujo está pensado para tener **control manual**
-en cada paso clave: tú apruebas las ideas antes de gastar tiempo en guion,
-audio, imágenes y video.
-
-Prioridad: **funcionar 100% local y gratis** primero (Ollama + FFmpeg + edge-tts).
-Las APIs de pago (ElevenLabs, OpenAI, etc.) son opcionales.
+Fábrica de contenido **semiautomática** para producir videos cortos verticales
+(TikTok / Reels / Shorts) en tu propia PC, **gratis y en local**. Tú mantienes el
+control: apruebas cada idea antes de gastar tiempo en guion, voz, imágenes y video.
 
 Ruta del proyecto: `C:\ProyectosIA\content-factory`
 
 ---
 
-## Requisitos
+## TL;DR — arranque en 2 pasos
 
-Ya verificados en tu equipo (✅) o por activar (⚠️):
+1. **Doble clic en `start_all.bat`** → instala dependencias, descarga el modelo de
+   IA, levanta n8n y verifica que todo esté listo.
+2. **Doble clic en `run_pipeline.bat`** → te pregunta un tema, genera ideas,
+   esperas a aprobar una, y crea el video. Lo encontrarás en `outputs\videos\`.
 
-| Herramienta | Estado | Notas |
+> Primera vez: edita `.env` (lo crea `start_all` a partir de `.env.example`) y pon
+> tu `TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_ID` si quieres aprobación/avisos por
+> Telegram. Sin Telegram también funciona (revisas las ideas en consola).
+
+---
+
+## ¿Qué hace? (el flujo)
+
+```
+[1] Ideas (Ollama) → [2] Aviso a Telegram → [3] APRUEBAS tú
+        → [4] Guion + [5] Escenas + [6] Prompts de imagen (Ollama)
+        → [7] Voz (edge-tts) → [8] Imágenes (ComfyUI o placeholders)
+        → [9] Video (FFmpeg) → [10] Guardado por fecha/tema → [11] Aviso a Telegram
+```
+
+Cada salida se guarda ordenada: `outputs/<tipo>/<fecha>_<tema>/`, por ejemplo
+`outputs/videos/2026-06-16_finanzas-personales/final.mp4`.
+
+## ¿Cómo lo hace? (qué herramienta hace qué)
+
+| Paso | Herramienta | Detalle |
 |---|---|---|
-| Python 3.12 | ✅ | `python --version` |
-| FFmpeg (full) | ✅ | en PATH, con NVENC/CUDA |
-| Ollama | ✅ activo | falta descargar un modelo |
-| Docker Desktop | ⚠️ instalado, apagado | necesario para n8n |
-| ComfyUI | ⚠️ opcional | imágenes; si no está, se usan placeholders |
-| GPU NVIDIA RTX 4060 Ti 16GB | ✅ | sobra para modelos 8B y ComfyUI |
+| Ideas, guion, prompts | **Ollama** (local) | Modelo `llama3.1:8b`. Sin coste ni API externa. |
+| Aprobación / avisos | **Telegram Bot** | Te manda las ideas y el resultado. Opcional. |
+| Voz narrada | **edge-tts** | Gratis, voz neuronal en español. Requiere internet. |
+| Imágenes | **ComfyUI** (opcional) | Si está activo en `:8188`, genera con tu checkpoint. Si no, crea *placeholders* y deja los prompts listos. |
+| Video | **FFmpeg** | Ensambla imágenes + voz en vertical 1080×1920. |
+| Orquestación | **n8n** (Docker) | Conecta los pasos y Telegram. Opcional para empezar. |
+| Tareas pesadas | **Python** | Los scripts de `scripts/`. |
+
+---
+
+## ¿Qué necesito? (requisitos)
+
+Detectado ya en tu equipo:
+
+| Herramienta | Estado | Para qué |
+|---|---|---|
+| Python 3.12 | ✅ instalado | ejecutar los scripts |
+| FFmpeg (full) | ✅ instalado | armar el video |
+| Ollama | ✅ activo | generar texto (falta `ollama pull`) |
+| GPU RTX 4060 Ti 16GB | ✅ | acelera Ollama y ComfyUI |
+| Docker Desktop | ⚠️ instalar/abrir | correr n8n |
+| ComfyUI | ⚠️ opcional | imágenes con IA |
+| Cuenta + bot de Telegram | ⚠️ opcional | aprobación y avisos |
 
 ---
 
 ## Instalación
 
-Ver guía detallada en [`docs/INSTALACION.md`](docs/INSTALACION.md). Resumen:
+### Opción A — automática (recomendada)
+
+Doble clic en **`start_all.bat`**. Hace todo: crea `.venv`, instala
+`requirements.txt`, copia `.env.example`→`.env`, descarga `llama3.1:8b`, abre
+Docker Desktop, levanta n8n y corre el diagnóstico.
+
+### Opción B — manual (PowerShell)
 
 ```powershell
 cd C:\ProyectosIA\content-factory
-
-# 1. Dependencias Python
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-# 2. Configuración: copia el ejemplo y rellena tus claves
 copy .env.example .env
-notepad .env     # pon TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, etc.
-
-# 3. Modelo de texto en Ollama
+notepad .env                 # pon tus datos de Telegram
 ollama pull llama3.1:8b
+docker compose up -d         # requiere Docker Desktop abierto
+python scripts\check_services.py
 ```
 
-> Tu `.env` real **nunca** se sube a git (está protegido por `.gitignore`).
+> **Tu `.env` nunca se sube a git** (está en `.gitignore`). Para compartir
+> cambios de configuración usa `.env.example` (sin valores reales).
+
+### Obtener el bot de Telegram
+
+1. En Telegram, habla con **@BotFather** → `/newbot` → copia el **token**.
+2. Envía cualquier mensaje a tu nuevo bot.
+3. Abre `https://api.telegram.org/bot<TU_TOKEN>/getUpdates` y copia el `chat.id`.
+4. Pégalos en `.env` (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`).
 
 ---
 
-## Estructura
+## Uso
 
-```
-content-factory/
-├─ config/            # config.py: carga .env (sin exponer claves)
-├─ scripts/           # scripts de Python (el motor)
-│  ├─ utils.py            # helpers: rutas por fecha/tema, Ollama, Telegram, logging
-│  ├─ check_services.py   # diagnóstico de servicios
-│  ├─ check_services.ps1  # versión PowerShell
-│  ├─ generate_ideas.py   # paso 1-2: ideas -> Telegram
-│  ├─ generate_script.py  # paso 4-6: guion + escenas + prompts de imagen
-│  └─ create_video.py     # paso 7-11: audio + imágenes + video final
-├─ prompts/           # plantillas de prompts (ideas, guion)
-├─ workflows/         # workflows de n8n (export/import .json)
-├─ outputs/           # TODO el contenido generado, ordenado por fecha y tema
-│  ├─ ideas/  scripts/  audio/  images/  videos/
-├─ database/          # ideas.json: registro y estado de ideas
-├─ logs/              # content-factory.log
-├─ docs/              # FLUJO.md, INSTALACION.md
-├─ docker-compose.yml # n8n
-├─ .env.example       # plantilla de configuración (sin secretos)
-└─ requirements.txt
-```
+### Flujo guiado (lo más fácil)
 
-Cada salida se guarda como `outputs/<tipo>/<fecha>_<tema>/`, por ejemplo
-`outputs/videos/2026-06-16_finanzas-personales/final.mp4`.
+Doble clic en **`run_pipeline.bat`** (o `.\.venv\Scripts\python.exe` + scripts).
+Te pregunta el tema, genera ideas, esperas para aprobar una, y arma el video.
 
----
-
-## Cómo correr n8n
+### Comando por comando
 
 ```powershell
-# Asegúrate de que Docker Desktop esté abierto y corriendo.
 cd C:\ProyectosIA\content-factory
-docker compose up -d
-# Abre http://localhost:5678
+
+# 1) Verificar servicios
+python scripts\check_services.py
+
+# 2) Generar ideas (van a Telegram si está configurado)
+python scripts\generate_ideas.py --tema "finanzas personales" --n 5
+
+# 3) Generar el guion de la idea aprobada (p.ej. la 1)
+python scripts\generate_script.py --tema "finanzas personales" --idea 1
+
+# 4) Armar el video final
+python scripts\create_video.py --tema "finanzas personales"
 ```
 
-Desde n8n, para llamar a servicios del host (nodos HTTP Request):
+Resultado en `outputs\videos\<fecha>_<tema>\final.mp4`.
+
+---
+
+## Cómo probar cada servicio
+
+```powershell
+# Ollama
+ollama list
+ollama run llama3.1:8b "Hola"
+
+# n8n  -> abre http://localhost:5678
+docker compose up -d
+
+# ComfyUI (opcional) -> abre http://localhost:8188
+# Diagnóstico de todo:
+python scripts\check_services.py
+```
+
+## ComfyUI (imágenes con IA)
+
+Inícialo en Windows (fuera de Docker). Ajusta en `.env`:
+
+```
+COMFYUI_CKPT=tu_checkpoint.safetensors   # nombre EXACTO del modelo instalado
+```
+
+`create_video.py` usará `config/comfyui_workflow.json` (txt2img) para generar una
+imagen por escena. Si ComfyUI no está activo, crea *placeholders* y guarda los
+prompts en `outputs/images/<fecha>_<tema>/prompts.txt` para que los generes a mano.
+
+## n8n (orquestación)
+
+Importa el workflow de ejemplo `workflows/ideas_to_telegram.json`
+(menú **⋮ → Import from File**). Dentro del contenedor, n8n llama a los servicios
+del host con:
 
 - Ollama → `http://host.docker.internal:11434`
 - ComfyUI → `http://host.docker.internal:8188`
 
-Apagar: `docker compose down`.
+---
+
+## Estructura del proyecto
+
+```
+content-factory/
+├─ start_all.bat / .ps1      ← inicia TODO el entorno
+├─ run_pipeline.bat / .ps1   ← flujo guiado ideas→guion→video
+├─ config/
+│  ├─ config.py              carga .env (sin exponer claves)
+│  └─ comfyui_workflow.json  plantilla txt2img para ComfyUI
+├─ scripts/
+│  ├─ utils.py               helpers: rutas por fecha/tema, Ollama, Telegram, logs
+│  ├─ check_services.py/.ps1 diagnóstico
+│  ├─ generate_ideas.py      paso 1-2
+│  ├─ generate_script.py     paso 4-6
+│  └─ create_video.py        paso 7-11
+├─ prompts/                  plantillas de prompts (ideas, guion)
+├─ workflows/                workflows de n8n (.json)
+├─ outputs/                  TODO lo generado: ideas/ scripts/ audio/ images/ videos/
+├─ database/ideas.json       registro y estado de ideas
+├─ logs/                     content-factory.log
+├─ docs/                     FLUJO.md, INSTALACION.md
+├─ docker-compose.yml        n8n
+├─ .env.example              plantilla de configuración (sin secretos)
+└─ requirements.txt
+```
 
 ---
 
-## Cómo probar Ollama
+## Solución de problemas
 
-```powershell
-ollama list                       # ver modelos instalados
-ollama run llama3.1:8b "Hola"     # prueba rápida
-# o vía API:
-curl http://localhost:11434/api/tags
-```
-
-## Cómo probar ComfyUI (opcional)
-
-Inícialo en Windows (fuera de Docker) y abre `http://localhost:8188`.
-Si no está activo, `create_video.py` genera **placeholders** con los prompts
-listos para que generes las imágenes a mano.
+| Síntoma | Causa | Solución |
+|---|---|---|
+| `docker compose` error de daemon | Docker Desktop apagado | Ábrelo y reintenta (o usa `start_all.bat`) |
+| Las ideas no se generan | Ollama sin modelo | `ollama pull llama3.1:8b` |
+| El video sale sin voz | sin internet o edge-tts no instalado | revisa conexión / `pip install edge-tts` |
+| Las imágenes son placeholders | ComfyUI no activo | inícialo o reemplaza las imágenes a mano |
+| Telegram no envía | falta token/chat_id | completa `.env` |
+| n8n no alcanza Ollama | usó `localhost` | dentro del contenedor usa `host.docker.internal` |
+| PowerShell bloquea el script | ExecutionPolicy | los `.bat` ya usan `-ExecutionPolicy Bypass` |
 
 ---
 
-## Cómo generar una idea
+## Próximos pasos sugeridos
 
-```powershell
-python scripts\check_services.py
-python scripts\generate_ideas.py --tema "finanzas personales" --n 5
-```
-
-Las ideas se guardan en `outputs/ideas/<fecha>_<tema>/ideas.json`, se registran
-en `database/ideas.json` y (si configuraste Telegram) se envían al chat para que
-**apruebes** una.
-
-## Cómo generar un guion
-
-```powershell
-# usa el número de la idea aprobada
-python scripts\generate_script.py --tema "finanzas personales" --idea 1
-```
-
-Genera `guion.json` (escenas con narración + prompt de imagen), más
-`narracion.txt` y `prompts_imagenes.txt`.
-
-## Cómo armar un video
-
-```powershell
-python scripts\create_video.py --tema "finanzas personales"
-```
-
-Crea el audio (edge-tts), prepara las imágenes (ComfyUI o placeholders) y
-ensambla `outputs/videos/<fecha>_<tema>/final.mp4`. Si Telegram está
-configurado, lo envía o avisa.
-
----
-
-## Flujo completo (comandos)
-
-```powershell
-cd C:\ProyectosIA\content-factory
-docker compose up -d
-python scripts\check_services.py
-python scripts\generate_ideas.py --tema "tu tema"
-# (apruebas una idea)
-python scripts\generate_script.py --tema "tu tema" --idea 1
-python scripts\create_video.py --tema "tu tema"
-```
-
-Diagrama y detalle en [`docs/FLUJO.md`](docs/FLUJO.md).
-
----
-
-## Próximos pasos
-
-- Integrar el envío real de workflows a ComfyUI (`config/comfyui_workflow.json`).
-- Botones de aprobar/rechazar en Telegram (callback) orquestados por n8n.
+- Orquestación completa en n8n con **botones de aprobar/rechazar** en Telegram.
 - Subtítulos quemados con FFmpeg a partir de `narracion.txt`.
 - Música de fondo y transiciones entre escenas.
-- Publicación semiautomática (cola de revisión antes de subir).
+- Voz premium opcional con ElevenLabs (`.env`).
+- Cola de revisión antes de publicar.
+
+Documentación ampliada: [`docs/FLUJO.md`](docs/FLUJO.md) y
+[`docs/INSTALACION.md`](docs/INSTALACION.md).
